@@ -59,11 +59,21 @@ To set up inverse search on Skim, go to the Preferences menu, select the Sync ta
 
 ### Linux
 
-On Linux, `texlive` is the officially supported distribution. For the time being, only the `okular` viewer is supported (in addition to the Atom-based `pdf-view`). It does provide forward and inverse search.
+On Linux, `texlive` is the officially supported distribution.
+Currently, the [PDF viewers](#viewing-pdf-documents) supported are:
+
+1. [`okular`](https://en.wikipedia.org/wiki/Okular):
+   default, can be installed on Debian with `apt-get install okular`
+2. [`pdf-view`](https://atom.io/packages/pdf-view):
+   see [Installation](#installation)
+
+Both viewers provide forward and inverse search.
+If you don't have `okular` installed, remember to change the default viewer
+in the package settings to `pdf-view`, [see below](#viewer-settings).
 
 Make sure to install the `latexmk` package; you can use the `tlmgr` utility, or (possibly) your distribution's package manager.
 
-To set up inverse search on Okular, go to "Settings", then "Configure Okular..." and then "Editor". In the "Editor" dropdown menu, choose "Custom Text Editor" and type "atom %f:%l" in the "Command" field. If you are on the Atom Beta channel, change atom to atom-beta.
+To set up inverse search with Okular, go to "Settings", then "Configure Okular..." and then "Editor". In the "Editor" dropdown menu, choose "Custom Text Editor" and type "atom %f:%l" in the "Command" field. If you are on the Atom Beta channel, change atom to atom-beta.
 
 #### Settings
 
@@ -90,7 +100,75 @@ In the following, I will use the notation `C-l` to refer to either `cmd-l` or `c
 By default, Atom uses `C-l` to select the current line. That is rebound to `C-l C-l` with LaTeXTools (i.e., hit `C-l` twice). This seems like a decent compromise: only one keybinding is modified, and even that is redefined to something only slightly more complex. Of course, you are free to use personalized keybindings, as everywhere else in Atom.
 
 
-## Compiling and Previewing documents
+## Viewing PDF documents
+
+Needs primarily two things:
+
+1. select an existing PDF viewer
+2. point to main file (and its directory)
+
+These are described below.
+
+
+### Jump to current location in the PDF file
+
+| Keybinding | Command |
+|---|----|
+| `C-l j` | `latextools:jump-to-pdf`|
+
+Jumps to the location in the PDF file corresponding to the current cursor position. Multi-file documents are fully supported: see the [next section](#multi-file-documents).
+
+
+### Multi-file documents
+
+Multi-file documents are fully supported. You need to add a line at the top of each *included* file to point LaTeXTools to the *root* file. This is used both for compilation and for reference / cite completion.
+The syntax is as follows: the first line of the file must be
+```
+% !TEX root = rootfile.tex
+```
+Replace `rootfile.tex` with the relative path to your actual root file.
+After you add this line, **save** your file
+(otherwise, this directive won't be recognized).
+
+If your document is arranged with a main file that includes files from
+other directories, for example
+```
+main_file.tex
+tex/included_by_main_file.tex
+```
+Then set the relative path as
+```
+% !TEX root = ../main_file.tex
+```
+
+
+### Viewer settings
+
+| Setting | CSON | Description |
+|---|---|---|
+| *Viewer* | `viewer` | `default` (native, platform-specific viewer) or `pdf-view` (Atom-based).|
+
+Note: these are *in addition* to any platform settings that may be relevant to you (e.g., settings for `SumatraPDF`), and the focus- and sync-related bulild settings described below.
+
+
+### Notes on pdf-view
+
+The Atom `pdf-view` package is supported as of v. 0.8.0. A couple of comments are in order.
+
+First, `pdf-view` uses the `synctex` command-line utility to implement backward and forward search. This means that you must have the `synctex` binary somewhere on your path; alternatively, `pdf-view` has a setting that allows you to specify where it is.
+
+The issue is how to make sure you have the `synctex` binary. If you are on Mac OS X and you installed the full MacTeX distro, you do---there is nothing else you need to do. If, however, you didn't install it, then you need to figure out how to add it using the MacTeX `tlmgr` utility. The same applies to TeXLive on Linux (and Windows): either you installed the entire distribution, or you must add the relevant package.
+
+On Windows, MikTeX does *not* provide `synctex` at all. On my machine, I installed the minimal TeXLive scheme, then added the `synctex` package (search for `synctex` in the TeXLive package manager). Then, I pointed `pdf-view` to the right location (the TeXLive binary directory). Just to be clear: the TeXLive distro is *not needed*; it was just the easiest, laziest way for me to get `synctex`. I could not find a stand-alone binary. If anyone has a better idea of how to get this to work, let me know!
+
+Second: by default, LaTeXTools opens the PDF preview in a separate pane, side-by-side with the pane containing the TeX source. (Remember, a pane is a collection of tabs in Atom). This works well if you have a large screen, or good eyesight. If neither of these apply to you (I have a 13in laptop and horrible eyesight!) you can simply drag the PDF tab to the pane containing the tab with your TeX source. Forward and inverse search will continue to work, but you now have the full width of your Atom window available for the TeX and PDF views (of course, you will need to switch between the two tabs).
+
+Note that the *Keep Focus* and *Forward Sync* settings are honored. If you keep the TeX and PDF files side by side, you probably want to leave *Keep Focus* on (the default). Otherwise, you probably want to set *Keep Focus* to false, so upon compilation the PDF tab is displayed.
+
+Finally, forward search in `pdf-view` is not perfect. Basically, `pdf-view` gets the page right, but does not scroll the document up/down so the relevant line (the one corresponding to the cursor position in the TeX file) is visible. This is a `pdf-view` limitation.
+
+
+## Compiling documents
 
 ### Build command: general functionality
 
@@ -109,24 +187,6 @@ The LaTeXTools Console stays visible after compilation by default, even if there
 Finally, if there were no errors, LaTeXTools will launch your PDF previewer and, by default, jump to the location corresponding to the position of the cursor in the tex source file ("forward search"). Also, by default, the focus will remain on Atom. These behaviors are configurable via settings.
 
 The text in the LaTeXTools console is selectable as usual.
-
-### Jump to current location in the PDF file
-
-| Keybinding | Command |
-|---|----|
-| `C-l j` | `latextools:jump-to-pdf`|
-
-Jumps to the location in the PDF file corresponding to the current cursor position. Multi-file documents are fully supported: see the [next section](#multi-file-documents).
-
-### Multi-file documents
-
-Multi-file documents are fully supported. You need to add a line at the top of each *included* file to point LaTeXTools to the *root* file. This is used both for compilation and for reference / cite completion.
-
-The syntax is as follows: the first line of the file must be
-```
-% !TEX root = rootfile.tex
-```
-(Of course, replace `rootfile.tex` with the name of your actual root file.) After you add this line, save your file---otherwise, this directive will not be recognized.
 
 
 ### Deleting temporary files
@@ -166,31 +226,6 @@ Please note: passing options can both be a security risk (if e.g. you enable `wr
 | *Builder* | `builder` | Currently, a single option is available, `texify-latexmk`.|
 | *Builder Settings Program* | `builderSettings.program`| One of `pdflatex`, `xelatex`, `lualatex`. Selects the tex engine to use.|
 | *Builder Settings Options* | `builderSettings.options` | Array of command-line options to pass to the tex engine.|
-
-### Viewer settings
-
-Note: these are *in addition* to any platform settings that may be relevant to you (e.g., settings for `SumatraPDF`), and the above focus- and sync-related bulild settings.
-
-| Setting | CSON | Description |
-|---|---|---|
-| *Viewer* | `viewer` | `default` (native, platform-specific viewer) or `pdf-view` (Atom-based).|
-
-
-### Notes on pdf-view
-
-The Atom `pdf-view` package is supported as of v. 0.8.0. A couple of comments are in order.
-
-First, `pdf-view` uses the `synctex` command-line utility to implement backward and forward search. This means that you must have the `synctex` binary somewhere on your path; alternatively, `pdf-view` has a setting that allows you to specify where it is.
-
-The issue is how to make sure you have the `synctex` binary. If you are on Mac OS X and you installed the full MacTeX distro, you do---there is nothing else you need to do. If, however, you didn't install it, then you need to figure out how to add it using the MacTeX `tlmgr` utility. The same applies to TeXLive on Linux (and Windows): either you installed the entire distribution, or you must add the relevant package.
-
-On Windows, MikTeX does *not* provide `synctex` at all. On my machine, I installed the minimal TeXLive scheme, then added the `synctex` package (search for `synctex` in the TeXLive package manager). Then, I pointed `pdf-view` to the right location (the TeXLive binary directory). Just to be clear: the TeXLive distro is *not needed*; it was just the easiest, laziest way for me to get `synctex`. I could not find a stand-alone binary. If anyone has a better idea of how to get this to work, let me know!
-
-Second: by default, LaTeXTools opens the PDF preview in a separate pane, side-by-side with the pane containing the TeX source. (Remember, a pane is a collection of tabs in Atom). This works well if you have a large screen, or good eyesight. If neither of these apply to you (I have a 13in laptop and horrible eyesight!) you can simply drag the PDF tab to the pane containing the tab with your TeX source. Forward and inverse search will continue to work, but you now have the full width of your Atom window available for the TeX and PDF views (of course, you will need to switch between the two tabs).
-
-Note that the *Keep Focus* and *Forward Sync* settings are honored. If you keep the TeX and PDF files side by side, you probably want to leave *Keep Focus* on (the default). Otherwise, you probably want to set *Keep Focus* to false, so upon compilation the PDF tab is displayed.
-
-Finally, forward search in `pdf-viw` is not perfect. Basically, `pdf-view` gets the page right, but does not scroll the document up/down so the relevant line (the one corresponding to the cursor position in the TeX file) is visible. This is a `pdf-view` limitation.
 
 
 ## Reference and Citation Completion
